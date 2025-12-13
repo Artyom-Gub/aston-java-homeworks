@@ -42,7 +42,7 @@ public class UserDao {
         } catch (Exception e) {
             if (tx != null) tx.rollback();
             throw new RuntimeException("Update failed", e);
-        }
+        } 
     }
 
     public void delete(Long id) {
