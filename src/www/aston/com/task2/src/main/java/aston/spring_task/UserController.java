@@ -3,6 +3,7 @@ package aston.spring_task;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @RestController
 @RequestMapping("/api/users")
@@ -10,6 +11,9 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUser(@PathVariable Long id) {
@@ -23,6 +27,8 @@ public class UserController {
     public UserDto createUser(@RequestBody UserDto dto) {
         User user = new User(dto.getName(), dto.getEmail(), dto.getAge());
         User saved = userRepository.save(user);
+
+        kafkaTemplate.send("user-events", new UserEvent("CREATE", saved.getEmail()));
 
         return convertToDto(saved); // Используем новое имя метода
     }
@@ -41,12 +47,14 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        if (userRepository.existsById(id)) {
-            userRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        }
+        return userRepository.findById(id).map(user -> {
 
-        return ResponseEntity.notFound().build();
+            userRepository.delete(user);
+
+            kafkaTemplate.send("user-events", new UserEvent("DELETE", user.getEmail()));
+
+            return ResponseEntity.noContent().<Void>build();
+        }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     private UserDto convertToDto(User user) {
