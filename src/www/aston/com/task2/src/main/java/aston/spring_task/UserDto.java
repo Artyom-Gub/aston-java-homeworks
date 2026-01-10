@@ -1,13 +1,20 @@
 package aston.spring_task;
 
-public class UserDto {
+import org.springframework.hateoas.RepresentationModel;
+
+public class UserDto extends RepresentationModel<UserDto> {
     private Long id;
     private String name;
     private String email;
     private Integer age;
 
     public UserDto(){};
-    public UserDto(Long id, String name, String email, Integer age) {}
+    public UserDto(Long id, String name, String email, Integer age) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.age = age;
+    }
 
     public Long getId() { return this.id; }
     public void setId(Long id) {

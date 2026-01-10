@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.kafka.core.KafkaTemplate;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -18,8 +19,12 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUser(@PathVariable Long id) {
         return userRepository.findById(id)
-                .map(this::toDto)
-                .map(ResponseEntity::ok)
+                .map(user -> {
+                    UserDto dto = convertToDto(user);
+                    dto.add(linkTo(methodOn(UserController.class).getUser(id)).withSelfRel());
+
+                    return ResponseEntity.ok(dto);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
