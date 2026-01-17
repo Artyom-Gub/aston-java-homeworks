@@ -5,10 +5,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.kafka.core.KafkaTemplate;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+    @Autowired
+    private CircuitBreakerFactory cbFactory;
 
     @Autowired
     private UserRepository userRepository;
@@ -33,7 +38,16 @@ public class UserController {
         User user = new User(dto.getName(), dto.getEmail(), dto.getAge());
         User saved = userRepository.save(user);
 
-        kafkaTemplate.send("user-events", new UserEvent("CREATE", saved.getEmail()));
+        cbFactory.create("kafka-send").run(
+                () -> {
+                    kafkaTemplate.send("user-events", new UserEvent("CREATE", user.getEmail()));
+                    return null;
+                },
+                throwable -> {
+                    System.err.println("Kafka is not responsing, the message didn't send: " + user.getEmail());
+                    return null;
+                }
+        );
 
         return convertToDto(saved); // Используем новое имя метода
     }
@@ -56,7 +70,16 @@ public class UserController {
 
             userRepository.delete(user);
 
-            kafkaTemplate.send("user-events", new UserEvent("DELETE", user.getEmail()));
+            cbFactory.create("kafka-send").run(
+                    () -> {
+                        kafkaTemplate.send("user-events", new UserEvent("DELETE", user.getEmail()));
+                        return null;
+                    },
+                    throwable -> {
+                        System.err.println("Kafka is not responsing, the message didn't send: " + user.getEmail());
+                        return null;
+                    }
+            );
 
             return ResponseEntity.noContent().<Void>build();
         }).orElseGet(() -> ResponseEntity.notFound().build());

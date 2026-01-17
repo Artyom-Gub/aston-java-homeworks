@@ -2,10 +2,12 @@ package aston.spring_task;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
-public class NotificationApplication {
+@EnableDiscoveryClient
+public class gatewayApiApplication {
     public static void main(String[] args) {
-        SpringApplication.run(NotificationApplication.class, args);
+        SpringApplication.run(gatewayApiApplication.class, args);
     }
 }
