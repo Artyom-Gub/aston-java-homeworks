@@ -7,3 +7,5 @@
 out/
 *.iml
 target/
+/target/
+*.jar
